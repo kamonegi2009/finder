@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FC2PPV FINDER (Cloud Sync)</title>
+  <style>
+    :root{
+      --bg: #f5f6f8; --box-bg: #ffffff; --text: #111111; --muted: #666666;
+      --line: #e6e6e6; --btn: #111111; --btnText: #ffffff; --btn-ghost: #444444;
+      --card-btn-bg: #ffffff; --count-bg: #f1f1f1; --radius: 14px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root{
+        --bg: #121212; --box-bg: #1e1e1e; --text: #eeeeee; --muted: #aaaaaa;
+        --line: #333333; --btn: #eeeeee; --btnText: #111111; --btn-ghost: #cccccc;
+        --card-btn-bg: #2a2a2a; --count-bg: #2a2a2a;
+      }
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family: system-ui, sans-serif; background:var(--bg); color:var(--text); }
+    .wrap{ max-width: 920px; margin: 0 auto; padding: 20px 16px 60px; }
+    header h1{ margin: 6px 0 0; font-size: 38px; letter-spacing: .2px; }
+    header .sub{ margin: 8px 0 14px; color:var(--muted); }
+    hr{ border:none; border-top: 2px solid var(--text); margin: 14px 0 18px; }
+    .box{ border:1px solid var(--line); border-radius: var(--radius); padding: 14px; background:var(--box-bg); margin-bottom: 14px; }
+    textarea{ width:100%; min-height: 160px; border:1px solid var(--line); border-radius: var(--radius); padding: 14px; font-size: 16px; background:var(--box-bg); color:var(--text); outline:none; }
+    .actions{ display:flex; gap:12px; margin-top: 12px; flex-wrap:wrap; align-items: center; }
+    button{ border-radius: 12px; border: 1px solid var(--text); padding: 10px 14px; font-size: 14px; font-weight: 800; cursor:pointer; background:var(--box-bg); color:var(--text); }
+    .primary{ background: var(--btn); color: var(--btnText); border-color: var(--btn); }
+    .ghost{ border-color:var(--line); color:var(--btn-ghost); }
+    .pill{ display:inline-flex; align-items:center; gap:8px; padding: 10px 12px; border:1px solid var(--line); border-radius: 999px; color:var(--text); background:var(--box-bg); font-size: 13px; font-weight:700; }
+    .summary{ display:flex; align-items:center; gap:14px; border:1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; background: var(--box-bg); margin: 14px 0 14px; }
+    .count{ width:56px; height:56px; border-radius: 14px; display:grid; place-items:center; background:var(--count-bg); font-size: 28px; font-weight: 900; }
+    .grid{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
+    @media (min-width: 820px){ .grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
+    .cardBox{ border:1px solid var(--line); border-radius: var(--radius); padding: 14px; background: var(--box-bg); }
+    .id{ font-size: 34px; font-weight: 900; letter-spacing: 1px; margin: 0 0 12px; }
+    .stack{ display:flex; flex-direction:column; gap:10px; }
+    .stack a{ display:flex; align-items:center; justify-content:center; gap: 8px; text-decoration:none; padding: 12px 12px; border-radius: 10px; font-weight: 900; border:1px solid var(--line); }
+    .site-icon { width: 18px; height: 18px; border-radius: 3px; object-fit: contain; }
+    .a1{ background:var(--btn); color:var(--btnText); border-color:var(--btn); }
+    .a2, .a3, .a4 { background:var(--card-btn-bg); color:var(--text); }
+    .a5{ background:var(--box-bg); color:var(--muted); }
+    .management-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+    .status { font-size: 14px; font-weight: bold; color: var(--muted); }
+    .syncStatus { font-size: 12px; font-weight: normal; color: #888; margin-left: 8px; }
+    .small{ font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.45; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>男の有益 <span style="font-weight:900;">FC2PPV</span> FINDER</h1>
+      <div class="sub">自動クラウド同期モデル</div>
+    </header>
+    <hr />
+
+    <input type="file" id="fileInput" accept=".txt" style="display: none;">
+
+    <div class="management-bar">
+      <div class="status">💾 保存データ: <span class="historyCount">0</span>件 <span class="syncStatus">☁️ 待機中</span></div>
+      <div class="management-actions">
+        <button class="ghost btnImportHistory">📂 読込</button>
+        <button class="ghost btnCopyHistory">📋 コピー</button>
+        <button class="ghost btnDownloadHistory">💾 保存</button>
+        <button class="ghost btnClearHistory">🗑️ 全削除</button>
+      </div>
+    </div>
+
+    <div class="box">
+      <textarea id="input" placeholder="ここにテキストをペースト..."></textarea>
+      <div class="actions">
+        <button class="ghost" id="btnPaste">📋 貼り付け</button>
+        <button class="primary" id="btnBuild">🔍 抽出</button>
+        <button id="btnClear" class="ghost">クリア</button>
+        <button class="ghost" id="btnCopy">新規IDをコピー</button>
+      </div>
+    </div>
+
+    <div class="summary" id="summary" style="display:none;">
+      <div class="count" id="count">0</div>
+      <div class="txt"><b>新しい品番</b>を検出しました</div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <script>
+    // クラウド設定
+    const JSONBIN_ID = '69aa061cd0ea881f40f31747';
+    const JSONBIN_KEY = '$2a$10$V8m7dzXHXbWbLiwN0HzSRulal/SmrdsbmQ51Dq1CbeCzeVemFnoWO';
+
+    const $ = (id) => document.getElementById(id);
+    let sessionDiscoveredIds = new Set();
+
+    function setSyncStatus(msg) { document.querySelectorAll('.syncStatus').forEach(el => el.textContent = msg); }
+
+    async function initCloudSync() {
+      setSyncStatus('☁️ 読込中...');
+      try {
+        const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_ID}`, {
+          headers: { 'X-Master-Key': JSONBIN_KEY, 'X-Bin-Meta': 'false' }
+        });
+        if (res.ok) {
+          const cloudData = await res.json();
+          if (Array.isArray(cloudData)) {
+            localStorage.setItem('fc2_history', JSON.stringify(cloudData));
+            updateHistoryCount();
+            render();
+          }
+          setSyncStatus('☁️ 同期済');
+        }
+      } catch(e) { setSyncStatus('⚠️ 接続エラー'); }
+    }
+
+    async function saveCloudHistory(historyArray) {
+      setSyncStatus('☁️ 保存中...');
+      try {
+        await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_ID}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY },
+          body: JSON.stringify(historyArray)
+        });
+        setSyncStatus('☁️ 同期済');
+      } catch(e) { setSyncStatus('⚠️ 保存失敗'); }
+    }
+
+    function extractIds(text){
+      const t = (text || "").replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0)).replace(/https?:\/\/[^\s]+/ig, "");
+      const found = [];
+      for (const m of t.matchAll(/\b(\d{7,})\b/g)){
+        const num = m[1];
+        if (num.length === 7) found.push(num);
+        else { const chunks = num.match(/\d{7}/g); if(chunks) found.push(...chunks); }
+      }
+      return [...new Set(found)];
+    }
+
+    function updateHistoryCount() {
+      const history = JSON.parse(localStorage.getItem('fc2_history') || '[]');
+      document.querySelectorAll('.historyCount').forEach(el => el.textContent = history.length);
+    }
+
+    function buildCard(id){
+      const google = `https://www.google.com/search?q=${id}`;
+      const brave  = `https://search.brave.com/search?q=${id}`;
+      const nyaa   = `https://sukebei.nyaa.si/?q=${id}`;
+      const missav = `https://missav01.com/dm20/ja/fc2-ppv-${id}`;
+      const fc2    = `https://adult.contents.fc2.com/article/${id}/`;
+      const div = document.createElement('div');
+      div.className = 'cardBox';
+      div.innerHTML = `<div class="id">${id}</div><div class="stack">
+        <a class="a1" href="${google}" target="_blank">Google</a>
+        <a class="a2" href="${brave}" target="_blank">Brave</a>
+        <a class="a3" href="${nyaa}" target="_blank">Sukebei</a>
+        <a class="a4" href="${missav}" target="_blank">MissAV</a>
+        <a class="a5" href="${fc2}" target="_blank">FC2公式</a>
+      </div>`;
+      return div;
+    }
+
+    function render(){
+      const text = $('input').value || '';
+      const parsedIds = extractIds(text);
+      const history = JSON.parse(localStorage.getItem('fc2_history') || '[]');
+      const displayIds = [];
+      const idsToSave = [];
+      for (const id of parsedIds) {
+        if (sessionDiscoveredIds.has(id)) displayIds.push(id);
+        else if (!history.includes(id)) { displayIds.push(id); idsToSave.push(id); sessionDiscoveredIds.add(id); }
+      }
+      $('grid').innerHTML = '';
+      displayIds.forEach(id => $('grid').appendChild(buildCard(id)));
+      $('summary').style.display = displayIds.length ? 'flex' : 'none';
+      if (idsToSave.length > 0) {
+        const newHistory = [...idsToSave, ...history];
+        localStorage.setItem('fc2_history', JSON.stringify(newHistory));
+        updateHistoryCount();
+        saveCloudHistory(newHistory);
+      }
+    }
+
+    $('btnPaste').addEventListener('click', async () => {
+      const text = await navigator.clipboard.readText();
+      if (text) { $('input').value += (text + '\n'); render(); }
+    });
+    $('btnBuild').addEventListener('click', render);
+    $('btnClear').addEventListener('click', () => { $('input').value = ''; $('grid').innerHTML = ''; $('summary').style.display = 'none'; sessionDiscoveredIds.clear(); });
+    
+    // 起動時
+    updateHistoryCount();
+    initCloudSync();
+  </script>
+</body>
+</html>
