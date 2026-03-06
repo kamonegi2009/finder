@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FC2PPV FINDER (Cloud Sync)</title>
+  <title>FC2PPV FINDER (Cloud Sync Fix)</title>
   <style>
     :root{
       --bg: #f5f6f8; --box-bg: #ffffff; --text: #111111; --muted: #666666;
@@ -92,10 +92,12 @@
 
     const $ = (id) => document.getElementById(id);
     let sessionDiscoveredIds = new Set();
+    let isSyncing = false; // 同期中フラグ
 
     function setSyncStatus(msg) { document.querySelectorAll('.syncStatus').forEach(el => el.textContent = msg); }
 
     async function initCloudSync() {
+      if (isSyncing) return;
       setSyncStatus('☁️ 読込中...');
       try {
         const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_ID}`, {
@@ -114,15 +116,24 @@
     }
 
     async function saveCloudHistory(historyArray) {
+      isSyncing = true;
       setSyncStatus('☁️ 保存中...');
       try {
-        await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_ID}`, {
+        const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_ID}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY },
           body: JSON.stringify(historyArray)
         });
-        setSyncStatus('☁️ 同期済');
-      } catch(e) { setSyncStatus('⚠️ 保存失敗'); }
+        if (res.ok) {
+          setSyncStatus('☁️ 同期済');
+        } else {
+          setSyncStatus('⚠️ 保存失敗');
+        }
+      } catch(e) { 
+        setSyncStatus('⚠️ 保存失敗'); 
+      } finally {
+        isSyncing = false;
+      }
     }
 
     function extractIds(text){
@@ -181,12 +192,45 @@
     }
 
     $('btnPaste').addEventListener('click', async () => {
-      const text = await navigator.clipboard.readText();
-      if (text) { $('input').value += (text + '\n'); render(); }
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) { $('input').value += (text + '\n'); render(); }
+      } catch (err) {
+        alert("ペースト権限がありません。手動で貼り付けてください。");
+      }
     });
+
     $('btnBuild').addEventListener('click', render);
-    $('btnClear').addEventListener('click', () => { $('input').value = ''; $('grid').innerHTML = ''; $('summary').style.display = 'none'; sessionDiscoveredIds.clear(); });
-    
+    $('btnClear').addEventListener('click', () => { 
+      $('input').value = ''; 
+      $('grid').innerHTML = ''; 
+      $('summary').style.display = 'none'; 
+      sessionDiscoveredIds.clear(); 
+    });
+
+    // 削除ボタンの修正
+    document.querySelectorAll('.btnClearHistory').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if(confirm('クラウドと内部の保存データをすべて削除しますか？')) {
+          localStorage.removeItem('fc2_history');
+          updateHistoryCount();
+          // クラウドの箱を初期状態（["0"]）にする
+          await saveCloudHistory(["0"]);
+          alert('削除完了しました');
+          location.reload(); // 状態をリセットするために再読み込み
+        }
+      });
+    });
+
+    // 読込・コピー・保存ボタンの動作維持
+    document.querySelectorAll('.btnCopyHistory').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const h = localStorage.getItem('fc2_history') || '[]';
+        navigator.clipboard.writeText(h);
+        alert('履歴をコピーしました');
+      });
+    });
+
     // 起動時
     updateHistoryCount();
     initCloudSync();
